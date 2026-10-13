@@ -2,6 +2,8 @@
 
 import os
 from typing import Dict, List, Optional
+from urllib.parse import urlparse
+from uuid import uuid4
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -32,10 +34,25 @@ class HelloAgentsLLM:
                 "模型 ID、API 密钥和服务地址必须提供，或在项目根目录的 .env 文件中配置。"
             )
 
+        default_headers = None
+        parsed_base_url = urlparse(base_url)
+        if (
+            parsed_base_url.hostname == "opencode.ai"
+            and parsed_base_url.path.rstrip("/") == "/zen/go/v1"
+        ):
+            # OpenCode Go 要求同一次对话的请求共用一个稳定的会话 ID。
+            default_headers = {
+                "User-Agent": "hello-agents-tutorial/1.0",
+                "x-opencode-session": str(uuid4()),
+                # 当前 Python 环境的 HTTP 解压库与压缩响应不兼容。
+                "Accept-Encoding": "identity",
+            }
+
         self.client = OpenAI(
             api_key=api_key,
             base_url=base_url,
             timeout=request_timeout,
+            default_headers=default_headers,
         )
 
     def think(
